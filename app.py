@@ -97,18 +97,15 @@ import os
 from ftplib import FTP
 
 def upload_to_server():
+    pw = os.getenv("mouse_P-5")
+    if not pw:
+        st.error("Secretsからパスワードが読み込めていません！")
+        return
+
     try:
         ftp = FTP("sv11005.star.ne.jp")
-        ftp.login("brescia0218@yahoo.co.jp", os.getenv("mouse_P-5"))
-        ftp.cwd("/public_html/")
-
-        with open("events.csv", "rb") as f:
-            ftp.storbinary("STOR events.csv", f)
-
-        ftp.quit()
-        st.success("サーバーへ自動アップロード完了")
-    except Exception as e:
-        st.error(f"FTPアップロード失敗: {e}")
+        # ユーザー名がメールアドレスで正しいか、管理画面で再確認してみてください
+        ftp.login("brescia0218@yahoo.co.jp", pw)
 
 # CSV保存
 st.session_state.df.to_csv(
@@ -122,31 +119,5 @@ st.session_state.df.to_csv(
 # アップロード実行
 upload_to_server()
 
-import streamlit as st
-from github import Github
-
-# 設定
-TOKEN = st.secrets["GITHUB_TOKEN"]
-REPO_NAME = st.secrets["REPO_NAME"]
-
-st.title("📅 WOOOLY安城 イベント更新")
-
-with st.form("add_event"):
-    name = st.text_input("イベント名")
-    date = st.date_input("開催日")
-    start_t = st.text_input("開始", value="10:00")
-    end_t = st.text_input("終了", value="15:00")
-    venue = st.text_input("会場")
-    submit = st.form_submit_button("サイトを更新する")
-
-if submit:
-    g = Github(TOKEN)
-    repo = g.get_repo(REPO_NAME)
-    contents = repo.get_contents("events.csv")
-    current_csv = contents.decoded_content.decode("utf-8")
-    
-    new_line = f"\n{name},{date},{start_t},{end_t},{venue}"
-    updated_csv = current_csv + new_line
-    
-    repo.update_file(contents.path, f"Add {name}", updated_csv, contents.sha)
-    st.success("更新完了！")
+ 
+        # ...以下略
