@@ -1,3 +1,4 @@
+st.error("テスト表示：ここまでプログラムは動いています")
 import streamlit as st
 from github import Github
 import streamlit as st
