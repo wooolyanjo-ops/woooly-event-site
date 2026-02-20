@@ -97,19 +97,20 @@ import os
 from ftplib import FTP
 
 def upload_to_server():
-    # CSVを一旦ファイルとして保存
-    st.session_state.df.to_csv(
-        "events.csv",
-        index=False,
-        header=False,
-        encoding="utf-8-sig"
-    )
-
     try:
-        ftp = FTP("sv11005.star.ne.jp")
-        # Secretsからパスワードを取得
-        ftp.login("codino18", "mouse_P-5")
-        ftp.cwd("/public_html/")
+        # パスワードとIDをここに「直接」正しく書く
+        USER = "codino18"
+        PASS = "mouse_P-5"
+        HOST = "sv11005.star.ne.jp"
+
+        ftp = FTP(HOST)
+        ftp.login(USER, PASS)
+        
+        # ログイン後にどこにいるか確認（ログに表示されます）
+        st.info(f"ログイン成功。現在の場所: {ftp.pwd()}")
+
+        # フォルダ移動（もしエラーが出るならここをコメントアウトして試す）
+        # ftp.cwd("/public_html/") 
 
         with open("events.csv", "rb") as f:
             ftp.storbinary("STOR events.csv", f)
@@ -118,6 +119,3 @@ def upload_to_server():
         st.success("サーバーへ自動アップロード完了！")
     except Exception as e:
         st.error(f"FTPアップロード失敗: {e}")
-
-# 最後にこの関数を実行する
-upload_to_server()
