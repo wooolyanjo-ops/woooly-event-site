@@ -108,8 +108,7 @@ def upload_to_server():
     try:
         ftp = FTP("sv11005.star.ne.jp")
         # Secretsからパスワードを取得
-        pw = st.secrets["mouse_P-5"] 
-        ftp.login("brescia0218@yahoo.co.jp", pw)
+        ftp.login("sv11005", "mouse_P-5")
         ftp.cwd("/public_html/")
 
         with open("events.csv", "rb") as f:
