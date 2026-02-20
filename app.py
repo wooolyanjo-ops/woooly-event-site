@@ -97,25 +97,20 @@ import os
 from ftplib import FTP
 
 def upload_to_server():
+    # 1. データをCSV文字列にする
+    csv_data = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
+    
     try:
-        # パスワードとIDをここに「直接」正しく書く
-        USER = "codino18"
-        PASS = "mouse_P-5"
-        HOST = "sv11005.star.ne.jp"
+        ftp = FTP("sv11005.star.ne.jp")
+        ftp.login("codino18", "mouse_P-5")
+        ftp.cwd("/public_html/") # サーバーの公開フォルダへ移動
 
-        ftp = FTP(HOST)
-        ftp.login(USER, PASS)
-        
-        # ログイン後にどこにいるか確認（ログに表示されます）
-        st.info(f"ログイン成功。現在の場所: {ftp.pwd()}")
-
-        # フォルダ移動（もしエラーが出るならここをコメントアウトして試す）
-        # ftp.cwd("/public_html/") 
-
-        with open("events.csv", "rb") as f:
-            ftp.storbinary("STOR events.csv", f)
+        # 2. メモリ上のデータを直接アップロード（ファイルを介さないので確実）
+        from io import BytesIO
+        bio = BytesIO(csv_data.encode('utf-8-sig'))
+        ftp.storbinary("STOR events.csv", bio)
 
         ftp.quit()
-        st.success("サーバーへ自動アップロード完了！")
+        st.success("✅ サーバーのCSVを更新しました！")
     except Exception as e:
-        st.error(f"FTPアップロード失敗: {e}")
+        st.error(f"❌ FTP失敗: {e}")
