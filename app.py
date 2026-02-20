@@ -1,4 +1,6 @@
 import streamlit as st
+from github import Github
+import streamlit as st
 import pandas as pd
 from io import StringIO
 import datetime
@@ -114,3 +116,29 @@ def upload_to_server():
         st.success("✅ サーバーのCSVを更新しました！")
     except Exception as e:
         st.error(f"❌ FTP失敗: {e}")
+
+def update_github():
+    try:
+        # 1. GitHubに接続（Secretsからトークンを読み込む）
+        g = Github(st.secrets["GITHUB_TOKEN"])
+        
+        # 2. リポジトリを指定（ご自身のリポジトリ名に書き換えてください）
+        # 例: "アカウント名/リポジトリ名"
+        repo = g.get_repo("brescia0218/woooly-event-site") 
+        
+        # 3. GitHub上の events.csv を取得
+        contents = repo.get_contents("events.csv")
+        
+        # 4. Streamlit上の最新データをCSV文字列に変換
+        csv_text = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
+        
+        # 5. GitHub上のファイルを上書き保存
+        repo.update_file(
+            contents.path, 
+            "Streamlitからの自動更新", 
+            csv_text, 
+            contents.sha
+        )
+        st.success("✅ GitHubへの保存が完了しました！")
+    except Exception as e:
+        st.error(f"❌ GitHub更新失敗: {e}")
