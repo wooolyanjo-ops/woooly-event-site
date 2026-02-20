@@ -97,15 +97,18 @@ import os
 from ftplib import FTP
 
 def upload_to_server():
-    pw = os.getenv("mouse_P-5")
-    if not pw:
-        st.error("Secretsからパスワードが読み込めていません！")
-        return
-
     try:
         ftp = FTP("sv11005.star.ne.jp")
-        # ユーザー名がメールアドレスで正しいか、管理画面で再確認してみてください
-        ftp.login("brescia0218@yahoo.co.jp", pw)
+        ftp.login("brescia0218@yahoo.co.jp", os.getenv("mouse_P-5"))
+        ftp.cwd("/public_html/")
+
+        with open("events.csv", "rb") as f:
+            ftp.storbinary("STOR events.csv", f)
+
+        ftp.quit()
+        st.success("サーバーへ自動アップロード完了")
+    except Exception as e:
+        st.error(f"FTPアップロード失敗: {e}")
 
 # CSV保存
 st.session_state.df.to_csv(
@@ -118,6 +121,3 @@ st.session_state.df.to_csv(
 
 # アップロード実行
 upload_to_server()
-
- 
-        # ...以下略
