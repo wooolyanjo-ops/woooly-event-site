@@ -120,7 +120,7 @@ def upload_to_server():
 def update_github():
     try:
         # 1. GitHubに接続（Secretsからトークンを読み込む）
-        g = Github(st.secrets["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"])
+        g = Github(st.secrets["GITHUB_TOKEN"])
         
         # 2. リポジトリを指定（ご自身のリポジトリ名に書き換えてください）
         # 例: "アカウント名/リポジトリ名"
