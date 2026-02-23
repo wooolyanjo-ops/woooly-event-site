@@ -107,7 +107,7 @@ def upload_to_server():
     try:
         ftp = FTP("sv11005.star.ne.jp")
         ftp.login("codino18", "mouse_P-5")
-        ftp.cwd("/public_html/woooly_calender.html/") # サーバーの公開フォルダへ移動
+        ftp.cwd("/public_html/") # サーバーの公開フォルダへ移動
 
         # 2. メモリ上のデータを直接アップロード（ファイルを介さないので確実）
         from io import BytesIO
@@ -144,3 +144,17 @@ def update_github():
         st.success("✅ GitHubへの保存が完了しました！")
     except Exception as e:
         st.error(f"❌ GitHub更新失敗: {e}")
+
+        # 画面の一番下に追加
+st.divider()
+st.subheader("🌐 外部公開・保存")
+
+col_sh1, col_sh2 = st.columns(2)
+
+with col_sh1:
+    if st.button("🚀 サーバー(FTP)を更新する", use_container_width=True):
+        upload_to_server()
+
+with col_sh2:
+    if st.button("🐙 GitHubを更新する", use_container_width=True):
+        update_github()
