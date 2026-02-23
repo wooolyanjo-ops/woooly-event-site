@@ -106,7 +106,7 @@ def upload_to_server():
     try:
         ftp = FTP("sv11005.star.ne.jp")
         ftp.login("codino18", "mouse_P-5")
-        ftp.cwd("/public_html/") # サーバーの公開フォルダへ移動
+        ftp.cwd("/public_html/woooly_calender.html/") # サーバーの公開フォルダへ移動
 
         # 2. メモリ上のデータを直接アップロード（ファイルを介さないので確実）
         from io import BytesIO
