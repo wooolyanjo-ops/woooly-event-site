@@ -1,11 +1,10 @@
 import streamlit as st
-st.error("テスト表示：ここまでプログラムは動いています")
-import streamlit as st
-from github import Github
-import streamlit as st
 import pandas as pd
-from io import StringIO
+from io import StringIO, BytesIO
 import datetime
+import os
+from ftplib import FTP
+from github import Github
 
 # --- 初期設定 ---
 if 'df' not in st.session_state:
@@ -16,25 +15,46 @@ if 'df' not in st.session_state:
 あんぷくフェスティバル販売会,2026/03/07,10:00,16:00,アンフォーレ"""
     st.session_state.df = pd.read_csv(StringIO(raw_data), names=['イベント名', '日付', '開始', '終了', '場所'])
 
-# 削除対象のインデックスを保持する変数を初期化
 if 'delete_idx' not in st.session_state:
     st.session_state.delete_idx = None
 
-# --- 削除実行用ダイアログ ---
+# --- 各種関数定義 ---
+
+def upload_to_server():
+    csv_data = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
+    try:
+        ftp = FTP(st.secrets["FTP_HOST"])
+        ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
+        ftp.cwd("/public_html/") 
+        bio = BytesIO(csv_data.encode('utf-8-sig'))
+        ftp.storbinary("STOR events.csv", bio)
+        ftp.quit()
+        st.success("✅ サーバーのCSVを更新しました！")
+    except Exception as e:
+        st.error(f"❌ FTP失敗: {e}")
+
+def update_github():
+    try:
+        g = Github(st.secrets["GITHUB_TOKEN"])
+        # リポジトリ名はあなたのものに合わせています
+        repo = g.get_repo("wooolyanjo-ops/woooly-event-site") 
+        contents = repo.get_contents("events.csv")
+        csv_text = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
+        repo.update_file(contents.path, "Streamlitからの自動更新", csv_text, contents.sha)
+        st.success("✅ GitHubへの保存が完了しました！")
+    except Exception as e:
+        st.error(f"❌ GitHub更新失敗: {e}")
+
 @st.dialog("イベントを削除しますか？")
 def confirm_delete_dialog():
     idx = st.session_state.delete_idx
     event_name = st.session_state.df.iloc[idx]['イベント名']
-    
     st.write(f"「**{event_name}**」をリストから削除します。よろしいですか？")
-    
     col1, col2 = st.columns(2)
     if col1.button("はい、削除します", type="primary", use_container_width=True):
-        # データの削除
         st.session_state.df = st.session_state.df.drop(idx).reset_index(drop=True)
-        st.session_state.delete_idx = None # リセット
+        st.session_state.delete_idx = None
         st.rerun()
-    
     if col2.button("キャンセル", use_container_width=True):
         st.session_state.delete_idx = None
         st.rerun()
@@ -42,7 +62,6 @@ def confirm_delete_dialog():
 # --- メイン画面 ---
 st.title("📅 イベント登録・管理")
 
-# --- 新規追加フォーム ---
 with st.form("event_form", clear_on_submit=True):
     st.subheader("新しいイベントを追加")
     col1, col2 = st.columns(2)
@@ -68,131 +87,32 @@ with st.form("event_form", clear_on_submit=True):
         else:
             st.error("イベント名を入力してください")
 
-# --- イベント一覧表示（削除ボタン付き） ---
 st.subheader("現在のイベントリスト")
-
-# ヘッダー
 h1, h2, h3, h4 = st.columns([3, 2, 2, 1])
 h1.caption("イベント名")
 h2.caption("日付 / 場所")
 h3.caption("時間")
 h4.caption("削除")
 
-# 各行の表示
 for index, row in st.session_state.df.iterrows():
     c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
-    
     c1.write(f"**{row['イベント名']}**")
     c2.write(f"{row['日付']}\n\n{row['場所']}")
     c3.write(f"{row['開始']} ~ {row['終了']}")
-    
-    # ゴミ箱ボタン
     if c4.button("🗑️", key=f"del_btn_{index}"):
         st.session_state.delete_idx = index
         confirm_delete_dialog()
 
-# --- ソースコード出力エリア ---
-st.divider()
-updated_csv_text = st.session_state.df.to_csv(index=False, header=False, lineterminator='\n').strip()
-st.subheader("📋 Webソースコード用（コピー用）")
-st.code(f"const rawData = `\n{updated_csv_text}\n`;", language='javascript')
-
-import os
-from ftplib import FTP
-
-def upload_to_server():
-    # 1. データをCSV文字列にする
-    csv_data = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
-    
-    try:
-        ftp = FTP(st.secrets["FTP_HOST"])
-        ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
-        ftp.cwd("/public_html/") # サーバーの公開フォルダへ移動
-
-        # 2. メモリ上のデータを直接アップロード（ファイルを介さないので確実）
-        from io import BytesIO
-        bio = BytesIO(csv_data.encode('utf-8-sig'))
-        ftp.storbinary("STOR events.csv", bio)
-
-        ftp.quit()
-        st.success("✅ サーバーのCSVを更新しました！")
-    except Exception as e:
-        st.error(f"❌ FTP失敗: {e}")
-
-def update_github():
-    try:
-        # 1. GitHubに接続（Secretsからトークンを読み込む）
-        g = Github(st.secrets["GITHUB_TOKEN"])
-        
-        # 2. リポジトリを指定（ご自身のリポジトリ名に書き換えてください）
-        # 例: "アカウント名/リポジトリ名"
-        repo = g.get_repo("wooolyanjo-ops/woooly-event-site") 
-        
-        # 3. GitHub上の events.csv を取得
-        contents = repo.get_contents("events.csv")
-        
-        # 4. Streamlit上の最新データをCSV文字列に変換
-        csv_text = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
-        
-        # 5. GitHub上のファイルを上書き保存
-        repo.update_file(
-            contents.path, 
-            "Streamlitからの自動更新", 
-            csv_text, 
-            contents.sha
-        )
-        st.success("✅ GitHubへの保存が完了しました！")
-    except Exception as e:
-        st.error(f"❌ GitHub更新失敗: {e}")
-
-        # 画面の一番下に追加
+# --- 外部公開・保存セクション（ここを整理しました） ---
 st.divider()
 st.subheader("🌐 外部公開・保存")
+st.info("「リストに追加」しただけではWebサイトは更新されません。下のボタンを順に押してください。")
 
 col_sh1, col_sh2 = st.columns(2)
-
 with col_sh1:
-    if st.button("🚀 サーバー(FTP)を更新する", use_container_width=True):
+    if st.button("🚀 サーバー(FTP)を更新する", use_container_width=True, key="ftp_btn"):
         upload_to_server()
 
 with col_sh2:
-    if st.button("🐙 GitHubを更新する", use_container_width=True):
+    if st.button("🐙 GitHubを更新する", use_container_width=True, key="gh_btn"):
         update_github()
-
-        # --- 実行ボタンの設置 ---
-st.divider()
-st.subheader("🌐 外部公開・保存")
-
-col_sh1, col_sh2 = st.columns(2)
-
-with col_sh1:
-    # FTP更新ボタン
-    if st.button("🚀 サーバー(FTP)を更新する", use_container_width=True):
-        upload_to_server()
-
-with col_sh2:
-    # GitHub更新ボタン
-    if st.button("🐙 GitHubを更新する", use_container_width=True):
-        update_github()
-
-# --- FTPアップロード関数の中身を修正（Secrets対応） ---
-# ※既存の upload_to_server 関数を以下のように書き換えてください
-def upload_to_server():
-    csv_data = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
-    
-    try:
-        # st.secrets から情報を読み込む
-        ftp = FTP(st.secrets["FTP_HOST"])
-        ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
-        
-        # ディレクトリ移動（エラーが出る場合はここを確認）
-        ftp.cwd("/public_html/") 
-
-        from io import BytesIO
-        bio = BytesIO(csv_data.encode('utf-8-sig'))
-        ftp.storbinary("STOR events.csv", bio)
-
-        ftp.quit()
-        st.success("✅ サーバーのCSVを更新しました！")
-    except Exception as e:
-        st.error(f"❌ FTP失敗: {e}")
