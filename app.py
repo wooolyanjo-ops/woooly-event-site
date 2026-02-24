@@ -105,7 +105,7 @@ def upload_to_server():
     csv_data = st.session_state.df.to_csv(index=False, header=False, encoding="utf-8-sig")
     
     try:
-        ftp = FTP("sv11005.star.ne.jp")
+        ftp = FTP(st.secrets["FTP_HOST"])
         ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
         ftp.cwd("/public_html/") # サーバーの公開フォルダへ移動
 
