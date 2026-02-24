@@ -25,7 +25,7 @@ def upload_to_server():
     try:
         ftp = FTP(st.secrets["FTP_HOST"])
         ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
-        ftp.cwd("/public_html/") 
+        #ftp.cwd("/public_html/") 
         bio = BytesIO(csv_data.encode('utf-8-sig'))
         ftp.storbinary("STOR events.csv", bio)
         ftp.quit()
