@@ -6,14 +6,30 @@ import os
 from ftplib import FTP
 from github import Github
 
-# --- 初期設定 ---
+# --- 初期設定 (修正版) ---
+
+# FTPから最新のCSVを取得してセッション状態に入れる関数
+def fetch_latest_csv():
+    try:
+        ftp = FTP(st.secrets["FTP_HOST"])
+        ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
+        # フォルダ移動（ご自身の環境に合わせて修正してください）
+        ftp.cwd("ss337117.stars.ne.jp/public_html")
+        
+        # サーバーのCSVをメモリに読み込む
+        from io import BytesIO
+        r = BytesIO()
+        ftp.retrbinary('RETR events.csv', r.write)
+        ftp.quit()
+        r.seek(0)
+        return pd.read_csv(r, names=['イベント名', '日付', '開始', '終了', '場所'])
+    except Exception as e:
+        # サーバーにファイルがない場合は、空のデータフレームを作成
+        return pd.DataFrame(columns=['イベント名', '日付', '開始', '終了', '場所'])
+
+# アプリ起動時に一度だけ実行
 if 'df' not in st.session_state:
-    raw_data = """ウーリー安城マジックショー＆見学会,2025/12/29,10:00,15:00,ウーリー安城
-ウーリー安城作業体験会,2026/01/10,13:00,15:00,ウーリー安城
-ららぽーと安城販売会,2026/01/31,10:00,16:00,三井ショッピングモールららぽーと安城
-桜井公民館まつり販売会,2026/02/14,10:00,15:00,桜井公民館
-あんぷくフェスティバル販売会,2026/03/07,10:00,16:00,アンフォーレ"""
-    st.session_state.df = pd.read_csv(StringIO(raw_data), names=['イベント名', '日付', '開始', '終了', '場所'])
+    st.session_state.df = fetch_latest_csv()
 
 if 'delete_idx' not in st.session_state:
     st.session_state.delete_idx = None
