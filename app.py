@@ -27,7 +27,7 @@ def upload_to_server():
         ftp.login(st.secrets["FTP_USER"], st.secrets["FTP_PASS"])
         #ftp.cwd("/public_html/") 
         bio = BytesIO(csv_data.encode('utf-8-sig'))
-        ftp.storbinary("STOR public_html/events.csv", bio)
+        ftp.storbinary("STOR ss337117.stars.ne.jp/public_html/events.csv", bio)
         ftp.quit()
         st.success("✅ サーバーのCSVを更新しました！")
     except Exception as e:
